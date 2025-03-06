@@ -1,8 +1,8 @@
 [Desktop Entry]
 Name=NBFC
 Comment=A simple Python application
-Exec=python3 ~/nbfc_gui.py
-Icon= ~/icon.cvg
+Exec=python3 nbfc_gui.py
+Icon= icon.svg
 Terminal=false 
 Type=Application
 Categories=Application;Utility;
