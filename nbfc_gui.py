@@ -8,6 +8,7 @@ import time
 import threading
 import sys
 import os
+import venv
 
 # --- Configuration & Constants ---
 APP_TITLE = "Fan Control"
@@ -16,6 +17,68 @@ TEXT_COLOR = "#1D1D1F" # Nearly black
 ACCENT_COLOR = "#007AFF" # Apple Blue
 FONT_FAMILY = "Helvetica" # Fallback to Arial if needed
 POLL_INTERVAL_MS = 2000
+
+# --- Bootstrapping ---
+
+REQUIREMENTS_FILE = "requirements.txt"
+VENV_NAME = ".venv"
+
+def get_base_prefix_compat():
+    """Get base prefix, compatible with Python versions."""
+    return getattr(sys, "base_prefix", None) or getattr(sys, "real_prefix", None) or sys.prefix
+
+def in_virtualenv():
+    return get_base_prefix_compat() != sys.prefix
+
+def ensure_venv():
+    """Ensure the script is running in a virtual environment with satisfied requirements."""
+    # If we are already in a venv, return
+    if in_virtualenv():
+        return
+
+    # Path to venv
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    venv_dir = os.path.join(script_dir, VENV_NAME)
+
+    # Python executable in venv
+    if sys.platform == "win32":
+        venv_python = os.path.join(venv_dir, "Scripts", "python.exe")
+    else:
+        venv_python = os.path.join(venv_dir, "bin", "python")
+
+    # Create venv if not exists
+    if not os.path.exists(venv_dir):
+        print(f"Creating virtual environment in {venv_dir}...")
+        try:
+            venv.create(venv_dir, with_pip=True)
+        except Exception as e:
+            print(f"Error creating venv: {e}")
+            sys.exit(1)
+
+    # Install requirements if requirements.txt exists
+    req_path = os.path.join(script_dir, REQUIREMENTS_FILE)
+    if os.path.exists(req_path):
+        # Check if we should try installing.
+        # For simplicity in this script, we just run pip install.
+        # Pip handles "already satisfied" quickly.
+        print("Checking dependencies...")
+        try:
+            subprocess.check_call([venv_python, "-m", "pip", "install", "-r", req_path], stdout=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            print("Failed to install dependencies.")
+            sys.exit(1)
+
+    # Re-launch script in venv
+    print("Relaunching in virtual environment...")
+    # Use os.execv to replace the current process
+    try:
+        os.execv(venv_python, [venv_python] + sys.argv)
+    except OSError as e:
+        print(f"Failed to relaunch in venv: {e}")
+        sys.exit(1)
+
+# Run bootstrapping before anything else
+ensure_venv()
 
 # --- NBFC Interface ---
 
